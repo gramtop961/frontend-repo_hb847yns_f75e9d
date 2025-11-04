@@ -1,15 +1,36 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import Spline from '@splinetool/react-spline';
 
 // 3D scene wrapper with atmospheric overlays and cinematic lighting vibe
 export default function Scene3D() {
+  const [error, setError] = useState(null);
+  const handleError = useCallback((e) => {
+    // Spline sometimes bubbles generic errors; capture a readable message
+    const msg = e?.message || 'Error al cargar la escena 3D';
+    // eslint-disable-next-line no-console
+    console.error('Spline error:', e);
+    setError(msg);
+  }, []);
+
   return (
     <div className="relative w-full h-full overflow-hidden bg-black">
-      {/* Spline 3D scene */}
-      <Spline
-        scene="https://prod.spline.design/1yF0r0X0y2kE0m7Y/scene.splinecode"
-        style={{ width: '100%', height: '100%' }}
-      />
+      {!error ? (
+        <Spline
+          scene="https://prod.spline.design/1yF0r0X0y2kE0m7Y/scene.splinecode"
+          style={{ width: '100%', height: '100%' }}
+          onError={handleError}
+        />
+      ) : (
+        <div className="flex h-full w-full flex-col items-center justify-center p-6 text-amber-50">
+          <h3 className="text-base font-semibold text-amber-200">No se pudo cargar la escena 3D</h3>
+          <p className="mt-2 max-w-md text-center text-sm opacity-90">
+            Puede ser un bloqueo de red o del navegador. Intenta recargar la vista previa o abrir en una pestaña privada.
+          </p>
+          <pre className="mt-3 max-w-lg overflow-auto rounded bg-white/5 p-2 text-xs text-amber-200/90">
+            {String(error)}
+          </pre>
+        </div>
+      )}
 
       {/* Warm cinematic gradient glow (non-interactive so it won't block the scene) */}
       <div
