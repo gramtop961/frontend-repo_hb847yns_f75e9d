@@ -1,52 +1,73 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import Spline from '@splinetool/react-spline';
 
-// 3D scene wrapper with atmospheric overlays and cinematic lighting vibe
+// 3D scene wrapper with atmospheric overlays and robust loading/retry
 export default function Scene3D() {
-  const scenes = [
-    // Primary scene (can occasionally fail on some networks)
-    'https://prod.spline.design/1yF0r0X0y2kE0m7Y/scene.splinecode',
-    // Backup lightweight scene
-    'https://prod.spline.design/4b2G5P7oF1Q7rYfK/scene.splinecode',
-  ];
+  // Primary + backup scenes. Keep at least two to fail over gracefully.
+  const scenes = useMemo(
+    () => [
+      'https://prod.spline.design/1yF0r0X0y2kE0m7Y/scene.splinecode',
+      'https://prod.spline.design/4b2G5P7oF1Q7rYfK/scene.splinecode',
+    ],
+    []
+  );
 
   const [sceneIndex, setSceneIndex] = useState(0);
   const [error, setError] = useState(null);
+  const [buster, setBuster] = useState(() => Date.now()); // cache-buster to avoid partial fetch cache
+  const [loading, setLoading] = useState(true);
+
+  const currentSceneUrl = useMemo(() => {
+    // Add a cache-busting query to mitigate partial-buffer caching issues
+    const url = scenes[sceneIndex];
+    const sep = url.includes('?') ? '&' : '?';
+    return `${url}${sep}v=${buster}`;
+  }, [scenes, sceneIndex, buster]);
+
+  const handleLoad = useCallback(() => {
+    setLoading(false);
+    setError(null);
+  }, []);
 
   const handleError = useCallback((e) => {
     const msg = e?.message || 'Error al cargar la escena 3D';
     // eslint-disable-next-line no-console
     console.error('Spline error:', e);
+    setLoading(false);
     setError(msg);
   }, []);
 
   const tryBackup = () => {
     if (sceneIndex < scenes.length - 1) {
-      setSceneIndex(sceneIndex + 1);
+      setLoading(true);
       setError(null);
+      setSceneIndex((i) => i + 1);
+      setBuster(Date.now());
     }
   };
 
   const retryCurrent = () => {
-    // Force re-mount by toggling index back and forth when only one option left
+    // Force remount with a fresh cache-busting param
+    setLoading(true);
     setError(null);
-    setSceneIndex((i) => (i === 0 && scenes.length === 1 ? 0 : i));
+    setBuster(Date.now());
   };
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-black">
       {!error ? (
         <Spline
-          key={sceneIndex}
-          scene={scenes[sceneIndex]}
+          key={`${sceneIndex}-${buster}`}
+          scene={currentSceneUrl}
           style={{ width: '100%', height: '100%' }}
+          onLoad={handleLoad}
           onError={handleError}
         />
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center p-6 text-amber-50">
           <h3 className="text-base font-semibold text-amber-200">No se pudo cargar la escena 3D</h3>
           <p className="mt-2 max-w-md text-center text-sm opacity-90">
-            Puede ser un bloqueo de red o del navegador. Intenta recargar la vista previa o abrir en una pestaña privada.
+            Puede ser un bloqueo de red o de caché del navegador. Prueba reintentar o cambiar a la escena alternativa.
           </p>
           <pre className="mt-3 max-w-lg overflow-auto rounded bg-white/5 p-2 text-xs text-amber-200/90">
             {String(error)}
@@ -66,6 +87,16 @@ export default function Scene3D() {
                 Cargar escena alternativa
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Subtle loading indicator overlay */}
+      {loading && !error && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-end justify-center pb-8">
+          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/50 px-3 py-1 text-[11px] text-amber-100/90 shadow backdrop-blur">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-300"></span>
+            Cargando escena…
           </div>
         </div>
       )}
