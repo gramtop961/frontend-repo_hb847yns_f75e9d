@@ -3,20 +3,42 @@ import Spline from '@splinetool/react-spline';
 
 // 3D scene wrapper with atmospheric overlays and cinematic lighting vibe
 export default function Scene3D() {
+  const scenes = [
+    // Primary scene (can occasionally fail on some networks)
+    'https://prod.spline.design/1yF0r0X0y2kE0m7Y/scene.splinecode',
+    // Backup lightweight scene
+    'https://prod.spline.design/4b2G5P7oF1Q7rYfK/scene.splinecode',
+  ];
+
+  const [sceneIndex, setSceneIndex] = useState(0);
   const [error, setError] = useState(null);
+
   const handleError = useCallback((e) => {
-    // Spline sometimes bubbles generic errors; capture a readable message
     const msg = e?.message || 'Error al cargar la escena 3D';
     // eslint-disable-next-line no-console
     console.error('Spline error:', e);
     setError(msg);
   }, []);
 
+  const tryBackup = () => {
+    if (sceneIndex < scenes.length - 1) {
+      setSceneIndex(sceneIndex + 1);
+      setError(null);
+    }
+  };
+
+  const retryCurrent = () => {
+    // Force re-mount by toggling index back and forth when only one option left
+    setError(null);
+    setSceneIndex((i) => (i === 0 && scenes.length === 1 ? 0 : i));
+  };
+
   return (
     <div className="relative w-full h-full overflow-hidden bg-black">
       {!error ? (
         <Spline
-          scene="https://prod.spline.design/1yF0r0X0y2kE0m7Y/scene.splinecode"
+          key={sceneIndex}
+          scene={scenes[sceneIndex]}
           style={{ width: '100%', height: '100%' }}
           onError={handleError}
         />
@@ -29,6 +51,22 @@ export default function Scene3D() {
           <pre className="mt-3 max-w-lg overflow-auto rounded bg-white/5 p-2 text-xs text-amber-200/90">
             {String(error)}
           </pre>
+          <div className="mt-4 flex items-center gap-2">
+            <button
+              onClick={retryCurrent}
+              className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10"
+            >
+              Reintentar escena actual
+            </button>
+            {sceneIndex < scenes.length - 1 && (
+              <button
+                onClick={tryBackup}
+                className="rounded-md border border-amber-300/30 bg-amber-200/10 px-3 py-2 text-xs text-amber-100 hover:bg-amber-200/20"
+              >
+                Cargar escena alternativa
+              </button>
+            )}
+          </div>
         </div>
       )}
 
