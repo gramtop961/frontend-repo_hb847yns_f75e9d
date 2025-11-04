@@ -1,28 +1,36 @@
-import { useState } from 'react'
+import React, { useState } from 'react';
+import Scene3D from './components/Scene3D';
+import Hotspots from './components/Hotspots';
+import InfoPanel from './components/InfoPanel';
+import LegendBar from './components/LegendBar';
+import AmbientAudio from './components/AmbientAudio';
 
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
+  const [selection, setSelection] = useState(null);
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">
-          Vibe Coding Platform
-        </h1>
-        <p className="text-gray-600 mb-6">
-          Your AI-powered development environment
-        </p>
-        <div className="text-center">
-          <button
-            onClick={() => setCount(count + 1)}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
-          >
-            Count is {count}
-          </button>
-        </div>
+    <div className="h-screen w-screen overflow-hidden bg-neutral-950 text-amber-50">
+      <div className="relative h-full w-full">
+        {/* 3D immersive scene */}
+        <Scene3D />
+
+        {/* Title + legend + animated routes */}
+        <LegendBar />
+
+        {/* Interactive hotspots for each country */}
+        <Hotspots onSelect={(id) => setSelection(id)} />
+
+        {/* Contextual information panel */}
+        <InfoPanel selection={selection} onClose={() => setSelection(null)} />
+
+        {/* Ambient generative music controls */}
+        <AmbientAudio />
+
+        {/* Cinematic bottom gradient that doesn't block interactions */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-black via-black/40 to-transparent"
+        />
       </div>
     </div>
-  )
+  );
 }
-
-export default App
